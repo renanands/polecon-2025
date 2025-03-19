@@ -1,0 +1,143 @@
+Good evening! 
+
+Today I'll talk about [article].
+
+The question we'll be exploring is: How does the inner decision-making process of the Chinese Communist Party, the CCP, work?
+
+
+------------ Context ------------
+
+- First, as a refreshner from previous classes: 
+Nowadays the CCP has 92 million members, about 6.6% of China's population.
+
+- The highest political body in the Party is the Central Comitee (CC), composed of people like ministers and governors. It has an avg of 195 members. It also has an alternate counterpart of non-voting juniors in the Alternating Comitee (AC), comprised of people like selected vice ministers and vice governors, with an avg of 151 members.
+
+- Above the CC is the Politburo, the executive body of the CC, where you'll find the Vice President and Vice Premier, with an avg of
+23 members.
+
+- An even more selective division is the Politburo Standing Commitee (PSC), which responds only to the Premier, with an avg of 8 members.
+Here you'll find the Premier themselves, but also the General Secretary, the Chairmans of the National Party Congress, among others.
+
+- And the National Party Congress is important for us here: it's usually where all of these people will convene in full during National Congressses. It's held every 5 years and has more than 2000 Party
+members in attendance.
+
+- One of the things decided in the National Congress is political
+appointment. They're decided by the Standing Comittee: the 
+Standing Comittee will decide who they promote to better daily
+positions or move up the comittee ladder.
+
+- By the way, there's Constitutional checks to counter faction formation ever since Mao. The guide here is that you want
+collective leadership within the party, you're rejecting 
+the possibility that subsets of the party should be able to be more powerful than the party itself.
+
+
+------------ Table of Contents ------------
+
+- With this in mind, I'll go over the data and strategy the 
+authors used, structural estimation and then some results
+on factions. 
+
+If we have time or with any of you become interested,
+I also have some tables and the full model in the appendix
+that we can go over through.
+
+
+------------ Data and strategy ------------
+
+- So I talked about collective leadership. The question is:
+does it actually hold?
+
+- Recall Factions in non-democracies, the paper we saw in class
+about the Party, where they find evidence of faction formation,
+but also balancing of power across factions.
+
+- But CCP meetings are entirely obscure, so it's very difficult to test anything in that regard. In fact, the only public part of the
+Standing Comittee's decisions on promotions is the actual final
+decision, and it's always published as enjoying unanimous support.
+
+- That said, this paper aims to do exactly that. They focus on AC/CC promotions by the Standing Comittee. They construct a network and the idea here is that you could test if social connections increase the probability of promotions.
+
+- To do that, they gather bibliographical data from all AC/CC and above members from the 12th to the 19th National Congress, so since 1982.
+
+- They use this information to estimate career rankings (R_i) with ML, and factorize them from 0 to 16, ascending in prestige.
+
+- They also create an adjacency matrix $G$ to encode the links among members. So entry G_{ij}=1 when i and j are linked, which happens
+when at least one of these are satisfied: (...)
+
+- They also define vertical and horizontal social connections on assignments: vertical connections are those between AC/CC members and the Standing Comittee, and horizontal connections are those between AC/CC members and their peers in hierarchy.
+
+% --
+
+- And what they do initially is they estimate career outcomes
+on social connections, and what they find is that vertical connections really improve the probability of a candidate being promoted, while horizontal connections either hurt the candidate or have a not significant influence.
+
+- This motivates a coalitional game within the Central Comittee where the incumbent Standing Comittee members are the key players; pay-offs for the Standing Comittee are succesful assignments and, for the AC/CC candidates, receiving a promotion. And so the authors go for structural estimation of such a game.
+
+
+------------ Structural estimation: Model overview ------------
+
+Again, I won't have time to go over the full model, just the intuition of it, but if anyone is interested we can go over some parts of it here.
+
+- So the structure of the model is as such: it's a two stage-model with two player tiers: Tier I has incumbent Standing Comittee members and Tier II has appointed AC/CC members.
+
+- In the first stage, Tier I players choose Tier II players' positional assignments. The trade-off is: if you appoint a Tier II player $i$, you weakly increase your chance of being in a winning coalition; however, some players are better connected than others.
+
+- In the second stage, both choose what level of effort to partake in.
+Effort increases your chance of being promoted, but of course effort is itself a cost.
+
+
+------------ Structural estimation: Results ------------
+
+Now on the results. Again, we have the tables, but the key points are outlined here.
+
+Pooling across all presidencies,
+- There are definitely connection beneficits inside the Central Comitee across the board: if you have a connection, your chances of having a succesful appointment OR receiving a promotion increase by 70%.
+-- They're as beneficial for Standing Comittee incumbents as they are for candidates
+-- But vertical connections are 3x more beneficial than horizontal ones
+- The majority rule $m$ is 75% here: so for a candidate $i$ to be appointed, the coalition backing this appointment up has on average 75% of the Standing Comittee's members
+
+%
+
+Now, if we distinguish presidencies,
+- Vertical connections are still positive,
+- But horizontal connections become unstable.
+-- In fact, during the Deng and Jiang presidencies, a horizontal
+connection is either not significant or will actually hurt your chances
+-- The gap with vertical connections also widens under Hu and currently with Xi too
+
+
+------------ Factions ------------
+
+The authors also consider the role of factions in this story.
+
+- Factions are endogenized from the constructed network and estimated via modularity clustering
+
+- They find penalties against faction-formation across the board
+-- If you consider only faction connections, you get a negative, but not significant influence on your winning chances
+-- But, controlling for vertical and horizontal connections, this negative influence becomes significant
+--- For daily promotions, having a vertical connection increases your chances by 16.4%, but, if this connection is with someone of the same faction, it decreases by 8.7% — so chances are almost halved
+--- This anti-factionalism effect still negative for Politburo promotions, but less significant
+
+
+------------ Takeaways ------------
+
+(...)
+
+------------ Appendix ------------
+
+Let's solve the model by backward induction: in stage 2, all players take their social connections S_i and individual characteristics \xi_i as given and simultaneously choose E\star_i to maximize excess utility [eq 4]. 
+
+[eqs 2-3] R_i here is meant to capture the notion of prestige, and refers to i's career potential. It's assumed to take a C-D form in social connections S_i and individual characteristics \xi_i. In turn,
+S_i is a weighted average of vertical and horizontal connections, where the weights are the links of the network.
+
+Note that effort and social connections are modeled as complements.
+
+Now, in stage 1, Tier I players choose Tier II players' position assigments in order
+to maximize their coalition's utility: D\star_i = argmax [eq 5]. Here
+	(a) (control) incumbent members of the PSC are fixed, so D_i only refers to Tier II players; (also appears in (sum), where coalitions are subsets of N^I)
+	(b) (sum) coalitions are substitutes of each other through D_i
+	(c) (sum) the size of each coalition needs to be at least m: the coalition will only decide on D_i if at least m of its members agree with it: coalitions are formed for personal interests, but some sort of consensus is required, due to
+	institutional aversion to authocrats
+	(d) (prob) each winning coalition is formed randomly
+	(e) (diff) T(\cdot) is the sum of the utility of all members inside a given coalition [underlined text]
+	(f) (minus) finally, the incumbent incurs in a quadratic cost to C(i) = D_i^2/2 for increasing their support for i
