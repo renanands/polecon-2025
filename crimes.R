@@ -89,6 +89,16 @@ mean_homicide_rates <-
   # mutate(code_muni = as.numeric(code_muni)) %>%
   mutate(gini_period = as.numeric(gini_period))
 
+# ---------------------------------------------------------------------
+
+# read pop (muni) 2010
+
+muni_pop_2010 <-
+  read.csv(here::here('data', 'muni_pop_2010.csv'), sep=';') %>%
+  # remove some of name_muni's text fmt 
+  mutate(name_muni =
+           stringi::stri_trans_general(str = .$name_muni,
+                                       id = "Latin-ASCII") %>% toupper())
 
 # ---------------------------------------------------------------------
 
@@ -130,33 +140,35 @@ crimes_plot_data <-
   summarise(.by = cisp,
             across(geometry, st_union),
             letal_sum = sum(letalidade_violenta))
+
+# ---
   
-crimes_plot <-
+viol_deaths_plot <-
   ggplot(data = crimes_plot_data) +
   theme_minimal() +
   geom_sf(fill = 'gray80', color = 'gray8') +
   geom_sf(aes(fill = letal_sum)) +
   scale_fill_gradient(low = "midnightblue", high = "cyan") +
-  labs(fill = 'Counts\n') +
-  ggtitle('Violent deaths in 2024 by CISP') +
-  theme(plot.title = element_text(hjust = 0.5))
-
-crimes_plot
-ggsave(here::here('out', 'crimes_plot.png'), crimes_plot)
+  labs(fill = 'Counts\n')
+#   ggtitle('Violent deaths in 2024 by CISP') +
+#   theme(plot.title = element_text(hjust = 0.5))
+ 
+# crimes_plot
+ggsave(here::here('out', 'viol_deaths_plot.png'), viol_deaths_plot)
 
 # ---
 
 shootings_plot <-
   ggplot() +
   theme_minimal() +
-  geom_sf(data = crimes_plot_data$geometry,
+  geom_sf(data = crimes_plot_data,
           fill = "gray8", color = "gray50") +
   geom_sf(data = shootings_metropol_rio %>% filter(data > '01-01-2024'),
-          alpha = 0.1, color = 'magenta') +
-  ggtitle('Shootings: Greater Rio (2024)') +
-  theme(plot.title = element_text(hjust = 0.5))
-
-shootings_plot
+          alpha = 0.1, size = 0.1, color = 'magenta')
+#   ggtitle('Shootings: Greater Rio (2024)') +
+#   theme(plot.title = element_text(hjust = 0.5))
+ 
+# shootings_plot
 ggsave(here::here('out', 'shootings_plot.png'), shootings_plot)
 
 # ---
@@ -169,11 +181,11 @@ upp_plot <-
                                            ymin = -23.5,
                                            ymax = -22.7),
           fill = "gray15", color = "gray50") +
-  geom_sf(data = UPP_sf, fill = 'dodgerblue', color = 'navy') +
-  ggtitle('UPPs in 2017') +
-  theme(plot.title = element_text(hjust = 0.5))
-
-upp_plot
+  geom_sf(data = UPP_sf, fill = 'dodgerblue', color = 'navy')
+#   ggtitle('UPPs in 2017') +
+#   theme(plot.title = element_text(hjust = 0.5))
+ 
+# upp_plot
 ggsave(here::here('out', 'upp_plot.png'), upp_plot)
 
 # ---------------------------------------------------------------------
@@ -183,7 +195,12 @@ ggsave(here::here('out', 'upp_plot.png'), upp_plot)
 reg_data <-
   left_join(mean_homicide_rates,
             gini_indices,
-            by = c('name_muni', 'gini_period')) 
+            by = c('name_muni', 'gini_period')) %>%
+  left_join(muni_pop_2010 %>% filter(pop_count > 500000),
+            by = 'name_muni') %>%
+  mutate(is_big = ifelse(!is.na(pop_count), 1, 0))
+
+head(reg_data)
 
 # ---------------------------------------------------------------------
 
@@ -194,35 +211,52 @@ muni_plot_data <-
             all_muni,
             by = 'name_muni') %>%
   filter(gini_period == 2010) %>%
-  st_as_sf()
+  st_as_sf() %>%
+  st_crop(xmin = -44.0,
+          xmax = -42.6,
+          ymin = -23.1,
+          ymax = -22.4)
 
 # - homicide rates
 
 homicide_plot <-
   ggplot() +
+  theme_minimal() +
   geom_sf(data = muni_plot_data, aes(fill = mean_rate), color = NA) +
   scale_fill_gradient(low = 'navy', high = 'magenta') +
-  ggtitle('Homicide rate by municipality in 2010') +
-  theme(plot.title = element_text(hjust = 0.5))
+  labs(fill = 'Mean rate per 100k')
+  # ggtitle('Homicide rate by municipality in 2010') +
+  # theme(plot.title = element_text(hjust = 0.5))
 
-homicide_plot
+# homicide_plot
 ggsave(here::here('out', 'homicide_plot.png'), homicide_plot)
 
 # - gini indices
 
 gini_plot <-
   ggplot(data = muni_plot_data) +
+  theme_minimal() +
   geom_sf(aes(fill = gini_index), color = NA) +
   scale_fill_gradient(low = 'navy', high = 'magenta') +
-  ggtitle('GINI index by municipality in 2010') +
-  theme(plot.title = element_text(hjust = 0.5))
+  labs(fill = 'Index')
+  # ggtitle('GINI index by municipality in 2010') +
+  # theme(plot.title = element_text(hjust = 0.5))
 
-gini_plot
+# gini_plot
 ggsave(here::here('out', 'gini_plot.png'), gini_plot)
 
 # -------------------------------------------------------------------------
 # -------------------            REGRESSIONS             ------------------
 # -------------------------------------------------------------------------
 
-fixest::feols(mean_rate ~ gini_index,
+no_FE <- fixest::feols(mean_rate ~ gini_index,
+              data = reg_data)
+
+ols <- fixest::feols(mean_rate ~ gini_index | code_muni + gini_period,
+              data = reg_data)
+
+ols500k <- fixest::feols(mean_rate ~ gini_index*is_big | code_muni + gini_period,
+                     data = reg_data)
+
+gm <- fixest::feglm(mean_rate ~ gini_index | code_muni + gini_period,
               data = reg_data)
