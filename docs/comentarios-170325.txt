@@ -1,3 +1,5 @@
+17-03-2025
+
 20 min
 
 know your question
@@ -5,3 +7,18 @@ know your question
 an idea of what you wanna do
 
 how your idea fits in the lit. eg this is the closest paper, this is what I'm changing (eg US -> BR)
+
+----------------------------------------------------------------------------------------------------------------------
+
+24-03-2025
+
+trade lib gabriel ulisseia
+
+fixed chars: area, #pop, density
+spillovers between neighborhoods rather than subdistricts
+
+rural small towns smaller than big cities districts ; also studying only them would be an ok exercise in itself
+
+el namorado
+
+add ident strateg
