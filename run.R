@@ -59,7 +59,9 @@ gini_indices <-
     values_to = "gini_index"
   ) %>%
   mutate(gini_period = as.numeric(gini_period)) %>% 
-  mutate(code_muni = as.numeric(code_muni))
+  mutate(code_muni = as.numeric(code_muni)) %>%
+  mutate(state = as.character(.$code_muni) %>% substr(., 1, 2)) %>%
+  tidyr::drop_na(state)
 
 # ---------------------------------------------------------------------
 
@@ -73,7 +75,8 @@ homicide_rates <-
          rate = valor) %>%
   mutate(name_muni =
            stringi::stri_trans_general(str = .$name_muni,
-                                       id = "Latin-ASCII") %>% toupper())
+                                       id = "Latin-ASCII") %>% toupper()) %>%
+  mutate(state = as.character(.$code_muni) %>% substr(., 1, 2))
 
 mean_homicide_rates <-
   homicide_rates %>%
@@ -84,8 +87,9 @@ mean_homicide_rates <-
       year > 2000 & year <= 2010 ~ 2010
     )
   ) %>%
-  summarise(.by = c(name_muni, gini_period), # code_muni not uniform
-            mean_rate = mean(rate)) %>% 
+  tidyr::drop_na(gini_period) %>%
+  summarise(.by = c(state, name_muni, gini_period), # code_muni not uniform
+            mean_rate = mean(rate)) %>%
   # mutate(code_muni = as.numeric(code_muni)) %>%
   mutate(gini_period = as.numeric(gini_period))
 
@@ -195,12 +199,15 @@ ggsave(here::here('out', 'upp_plot.png'), upp_plot)
 reg_data <-
   left_join(mean_homicide_rates,
             gini_indices,
-            by = c('name_muni', 'gini_period')) %>%
+            by = c('state', 'name_muni', 'gini_period')) %>%
   left_join(muni_pop_2010 %>% filter(pop_count > 500000),
             by = 'name_muni') %>%
-  mutate(is_big = ifelse(!is.na(pop_count), 1, 0))
-
-head(reg_data)
+  mutate(is_big = ifelse(!is.na(pop_count), 1, 0)) %>%
+  select(-pop_count) %>%
+  mutate(state_name_muni = 
+           collapse::finteraction(.$state, .$name_muni)) %>%
+  mutate(state_year = 
+           collapse::finteraction(.$state, .$gini_period))
 
 # ---------------------------------------------------------------------
 
@@ -249,14 +256,54 @@ ggsave(here::here('out', 'gini_plot.png'), gini_plot)
 # -------------------            REGRESSIONS             ------------------
 # -------------------------------------------------------------------------
 
-no_FE <- fixest::feols(mean_rate ~ gini_index,
+no_FE_all <- 
+  fixest::feols(mean_rate ~ gini_index,
               data = reg_data)
 
-ols <- fixest::feols(mean_rate ~ gini_index | code_muni + gini_period,
-              data = reg_data)
+no_FE_500k_interaction <-
+  fixest::feols(mean_rate ~ gini_index*is_big,
+                data = reg_data)
 
-ols500k <- fixest::feols(mean_rate ~ gini_index*is_big | code_muni + gini_period,
-                     data = reg_data)
+no_FE_500k_filter <-
+  fixest::feols(mean_rate ~ gini_index,
+                data = reg_data %>% filter(is_big == 1))
 
-gm <- fixest::feglm(mean_rate ~ gini_index | code_muni + gini_period,
-              data = reg_data)
+summary(no_FE_all)
+summary(no_FE_500k_filter)
+summary(no_FE_500k_interaction)
+
+# ---
+
+ols_all <- 
+  fixest::feols(mean_rate ~ gini_index | state_year,
+                data = reg_data)
+
+ols_500k_filter <- 
+  fixest::feols(mean_rate ~ gini_index*is_big | state_year,
+                data = reg_data %>% filter(is_big == 1))
+
+ols_500k_interaction <- 
+  fixest::feols(mean_rate ~ gini_index*is_big | state_year,
+                data = reg_data)
+
+summary(ols_all)
+summary(ols_500k_filter)
+summary(ols_500k_interaction)
+
+# ---
+
+mlm_all <-
+  fixest::femlm(mean_rate ~ gini_index | state_year,
+                data = reg_data)
+
+mlm_500k_filter <-
+  fixest::feols(mean_rate ~ gini_index | state_year,
+                data = reg_data %>% filter(is_big == 1))
+
+mlm_500k_iteraction <-
+  fixest::feols(mean_rate ~ gini_index*is_big | state_year,
+                data = reg_data)
+
+summary(mlm_all)
+summary(mlm_500k_filter)
+summary(mlm_500k_iteraction)
